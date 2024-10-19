@@ -1,21 +1,21 @@
 from flask import Flask, request
-import mysql.connector
-from mysql.connector import Error
+import psycopg2
+from psycopg2 import Error
 import os
 
 app = Flask(__name__)
 
 def get_db_connection():
     try:
-        connection = mysql.connector.connect(
-            host=os.getenv('MYSQL_HOST'),
-            database=os.getenv('MYSQL_DATABASE'),
-            user=os.getenv('MYSQL_USER'),
-            password=os.getenv('MYSQL_PASSWORD')
+        connection = psycopg2.connect(
+            host=os.getenv('POSTGRES_HOST', 'db'),
+            database=os.getenv('POSTGRES_DB', 'reverse_ip_db'),
+            user=os.getenv('POSTGRES_USER', 'user'),
+            password=os.getenv('POSTGRES_PASSWORD', 'password')
         )
         return connection
     except Error as e:
-        print(f"Error connecting to MySQL: {e}")
+        print(f"Error connecting to PostgreSQL: {e}")
         return None
 
 def reverse_ip(ip):
@@ -33,7 +33,7 @@ def get_reverse_ip():
             
             # Create table if not exists
             cursor.execute('''CREATE TABLE IF NOT EXISTS ips
-                              (id INT AUTO_INCREMENT PRIMARY KEY,
+                              (id SERIAL PRIMARY KEY,
                                original VARCHAR(15),
                                reversed VARCHAR(15))''')
             
@@ -44,11 +44,12 @@ def get_reverse_ip():
         except Error as e:
             print(f"Error: {e}")
         finally:
-            if connection.is_connected():
+            if cursor:
                 cursor.close()
+            if connection:
                 connection.close()
     
-    return f"This is Your IP in reverse: {reversed_ip}"
+    return f"Your IP in reverse: {reversed_ip}"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
